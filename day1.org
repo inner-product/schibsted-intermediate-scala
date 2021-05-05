@@ -1,0 +1,239 @@
+#+TITLE: Day 1
+* Todo List
+- Vote on OO vs FP
+* Introductions
+** Andrey
+Android developer. Almost no Scala ... should have been invited to introductory course.
+Java for many years. 1 year of Kotlin.
+** Daniel
+Scala for 3 months. Mostly C. A bit of Python, Go. Interested in programming languages.
+** Daniele
+Scala for 1.5 years. Frontend JS, backend Java.
+** Egil
+Scala for 2 years. Spark. Previously Python, Oracle, a bit of Java.
+** Hyacinthe
+Backend. A bit of Scala.
+** Jarno
+Predict team. Schibsted for a couple of years and mostly Scala. Learned O'Caml. Assembly, C, C++, Python. Interested in PL, PL design.
+** Joanna
+2.5 years Scala, Spark. Cloud Formation. Java, Kotlin, Python.
+** Joel
+Data engineer. Mainly Java at University. Python and some Scala (Spark). Lots of Cloud Formation, infrastructure.
+** Keunsoo
+Scala for 3 years. Prior backend, data engineer, Java, Python, C++
+** Lars
+Scala since 2019. Background in Python, SQL. AI & ML. Prior to that iOS.
+** Oleg
+Scala, Python for 2 years. Java 6-7 years. Groovy for 2 years. Data / backend engineer.
+** Tor
+Backend engineer in segment team. Scala since 2015. Mainly services. Spark if I have to.
+** Torgeir
+Java in big boring business applications. Scala since 1 year.
+* Structure
+10-1:30, 30 minutes for lunch at 12.
+* Curriculum
+** Review
+*** Algebraic data types
+Data types representing sums and products:
+- sum: logical or (e.g. either)
+- product: logical and (e.g. tuple is a product where the fields don't have names)
+
+- You can do algebra with them.
+- Exponential and quotient types (which we aren't going to talk about)
+
+How do we represent in Scala:
+
+#+begin_lang scala
+// A is B or C
+sealed trait A
+final case class B() extends A
+final case class C() extends A
+#+end_lang
+
+#+begin_lang scala
+// A is B and C
+final case class A(b: B, c: C)
+#+end_lang
+
+A few notes:
+- ~sealed abstract class~ instead of ~sealed trait~. Basically the same.
+- ~case object~ is also ok, if there are no fields (for product types)
+- Closed worlds. You cannot extend them, which brings safety properties
+
+Case classes:
+- simple data container
+- ~equals~ ~hashCode~ => value level equality, immutable
+- pattern matching (~unapply~)
+- ~toString~
+- convenience constructor (~apply~)
+- copy constructor
+- automatically have companion object
+- you cannot extend a case class from a case class
+
+Conceptual level (denotational level)
+Implementation level (operational level)
+
+{ Cat, Dog, Mouse } and { Left, Right } (product) 3 x 2 = 6
+{ Cat, Dog, Mouse } or { Left, Right } (sum) 3 + 2 = 5
+
+a * (b + c) = (a * b) + (a * c) distributive law holds for algebraic data types
+*** Structural recursion
+Any algebraic data type can be transformed into anything using structural recursion. (Related to proof by induction.)
+
+In a structural recursion:
+- you have a case for each branch in a logical or (sum type)
+- if the data is recursive the method is recursive
+
+Structural recursion is:
+- pattern matching
+  #+begin_lang scala
+  // A is B or C
+  a match {
+    case B() => ???
+    case C() => ???
+  }
+  // A is a B and C
+  case A(b, c) => ???
+  #+end_lang
+- polymorphism
+  #+begin_lang scala
+  // A is B or C
+  sealed trait A {
+    def aMethod: D
+  }
+  final case class B() {
+    def aMethod: D =
+      ???
+  }
+  final case class C() {
+    def aMethod: D =
+      ???
+  }
+  // A is a B and C
+  final case class A(b: B, c: C) {
+    def aMethod: D =
+      ???
+  }
+  #+end_lang
+
+#+begin_lang scala
+// List of A is Empty or Pair    List = Empty + Pair
+// Pair is a head (which is A) and a tail (which is a List of A)   Pair = A * List
+sealed trait List[A] {
+  def map[B](f: A => B): List[B] =
+    this match {
+      case Empty() => Empty()
+      case Pair(h, t) => Pair(f(h), t.map(f))
+    }
+
+  def ++(that: List[A]): List[A] =
+    this match {
+      case Empty() => that
+      case Pair(h, t) => Pair(h, t.++(that))
+    }
+
+  def flatMap[B](f: A => List[B]): List[B]
+}
+final case class Empty[A]() extends List[A] {
+  def flatMap[B](f: A => List[B]): List[B] =
+    Empty()
+}
+final case class Pair[A](head: A, tail: List[A]) extends List[A] {
+  def flatMap[B](f: A => List[B]): List[B] =
+    f(head).++(tail.flatMap(f))
+}
+#+end_lang
+
+Aside:
+- ~a.b(c)~ (method call notation) is equivalent to ~a b c~ (operator notation)
+- generally use method call notation except for symbolic method names
+  E.g. could write ~list map f~ but it is conventional to write ~list.map(f)~
+
+L[A]=1+A*L[A]
+
+Tradeoffs of pattern matching vs polymorphism:
+- pattern matching code is all in one place
+- polymorphism (dynamic dispatch) might be more familiar
+- maybe a performance difference (I'm not sure but I would expect Hotspot deals better with polymorphism)
+- type inference in GADTs (generalized algebraic data types) often works better with polymorphism
+- pattern matching can be used to extend the functionality without changing the sealed trait definition.
+
+  #+begin_lang scala
+  def myCoolMethod[A](anOption: Option[A]) =
+    anOption match {
+        case None => doSomething()
+        case Some(v) => doSomethingElse(v)
+    }
+  #+end_lang
+
+
+A natural number N is
+- 0 or
+- 1 + M, where M is a natural number
+
+Algebraic data type
+#+begin_lang scala
+// Church numerals?
+sealed trait Natural
+final case class Zero() extends Natural
+final case class Successor(m: Natural) extends Natural
+#+end_lang
+
+Proof by induction on the natural numbers:
+- prove it for the base case (0)
+- assume it holds for M, prove it holds for M + 1
+
+The sum of the elements from 0 to n is (n * (n + 1)) / 2
+
+Base case
+- sum of 0 is (0 * 1) / 2. True!
+
+M + 1 case
+- Assume sum of 0 .. M is (M * (M + 1)) / 2
+- (M+1) + (M * (M + 1)) / 2
+  Algebra follows ...
+
+  = (M + 1 + (M^2) + M + 1) / 2
+  = (M^2 + 2M + 2) / 2
+  = ((M + 1) * (M + 2)) / 2
+
+QED
+
+#+begin_lang scala
+val one = Successor(Zero)
+val two = Successor(one)
+
+def toInt(n: Natural): Int =
+  n match {
+    case Zero() => 0
+    case Successor(m) => 1 + toInt(m)
+  }
+
+def sum(n: Natural): Int =
+  n match {
+    case Zero() => 0
+    // (M + 1) + ((M * (M + 1)) / 2)
+    case Successor(m) => toInt(n) + sum(m)
+  }
+#+end_lang
+
+Howard-Curry correspondence programs = proofs
+
+Transition functions: (State, Observation) => State
+*** Type equations for map and flatMap
+~map: F[A] map (A => B) = F[B]~
+~flatMap: F[A] flatMap (A => F[B]) = F[B]~
+
+You can reason using the usual algebraic techniques.
+
+An ~F~ that has a ~map~ method is called a Functor
+An ~F~ that has a ~flatMap~ method is called a Monad
+
+(This is a slight lie. There are a few additional requirements.)
+** Error handling
+** Concurrency
+** Functional Effects
+** Type classes
+** Type classes in Cats
+** Dependency Injection
+** Property-based Testing
