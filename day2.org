@@ -1,0 +1,63 @@
+#+TITLE: Day 2
+* Error Handling
+** Users of Errors
+- End users: what did I do wrong and how can I fix it. This is UX.
+- Developers: where did this error occur and what caused it.
+** Control Flow
+- Fail fast: stop immediately on error
+- Accumulation: accumulate all errors and report them
+
+Often have stages where you accumulate errors. If no errors move on to the next stage.
+** Compiler Support
+Does the compiler shout at us if we have an error that we haven't handled? (And do we want it to do this?)
+
+Developer focused errors: exceptions are usually ok (so long as we want to fail fast)
+User focused errors: compiler support is good. Make sure we handle all the user focused errors and present useful information to the user.
+** Exceptions
+Good: stack traces. Great for developers. Easy to deal with if you don't want to do anything clever when they happen.
+
+Bad: Exception can be just about anything. Compiler doesn't shout at you about them.
+
+Conclusion: Use them for things that you can't reasonably recover from. Developer focused errors.
+** Try
+Try is success or failure, but the failure case always holds a ~Throwable~.
+Mostly useful in the world of ~Future~ or when interoperating with Java code.
+** Either (Typed Errors)
+Either is either left or right (an algebraic data type).
+#+begin_lang scala
+sealed trait Either[A,B]
+final case class Left[A,B](a: A) extends Either[A,B]
+final case class Right[A,B](b: B) extends Either[A,B]
+#+end_lang
+
+By convention ~Left~ holds an error, and ~Right~ holds a success.
+
+Type ~A~ is the type of our errors. Usually use an algebraic data type.
+Type ~B~ is a successful result.
+*** Operations
+~map~: ~Either[A,B] map (B => C) = Either[A,C]~
+- maps the success case ("right-biased") (If you're stuck in Scala 2.12 or 2.11 [e.g. Spark users :-(] this might not be the case.)
+- Transforms the success value (if one exists) but doesn't allow introducing a failure.
+
+~flatMap~: ~Either[A,B] flatMap (B => Either[A,C]) = Either[A,C]~
+- transforms the success case and can introduce a failure
+- failure type doesn't change
+- conceptually sequences possibly failing operations
+
+~leftMap~: ~Either[A,B] leftMap (A => C) = Either[C,B]~
+~flip~: ~Either[A,B] flip = Either[B,A]~
+~fold~: ~Either[A,B] fold (A => C) (B => C) = C~
+
+~left~ (left-projection): Look at the documentation (but you probably don't need to use it.)
+
+Clearly indicating that a method can fail is still useful. Usually there is some system wide "effect" type like ~IO~ or ~Future~ that will catch exceptions. Returning, for example, an ~IO~ is one way to indicate your method can throw exceptions.
+* Concurrency
+Futures represent a value that may be available in the future.
+- you can schedule things to happen when the value is available using ~map~, ~flatMap~, etc.
+- the value may never become available due to timeout or other error
+
+Futures start running as soon as you create them.
+- Constructors are on the companion object.
+
+You need a thread pool (called an ~ExecutionContext~) available to run futures.
+- the compiler gives a good error message about this
