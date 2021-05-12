@@ -1,0 +1,91 @@
+#+TITLE: Day3
+* Cats
+An enhanced standard library for Scala.
+
+#+begin_lang scala
+import cats._
+import cats.implicits._
+#+end_lang
+** Adding Elements
+#+begin_lang scala
+1 |+| 2 == 3
+List(1, 2, 3) |+| List(4, 5, 6) == List(1, 2, 3, 4, 5, 6)
+// Notice that I used Option here. What happens if we change to Some?
+Option(1) |+| Option(2) == Some(3)
+Option(1) |+| None == Some(1)
+
+A |+| A == A
+#+end_lang
+
+Can also add all the element of a collection
+
+#+begin_lang scala
+List(1, 2, 3).combineAll == 6 == List(1, 2, 3).sum
+List(Set(1), Set(2), Set(1), Set.empty[Int]).combineAll == Set(1, 2)
+
+F[A].combineAll == A
+#+end_lang
+
+This is a *monoid*.
+The binary operation is *associative*
+~(a |+| b) |+| c == a |+| (b |+| c)~
+
+There is also an identity ~0~
+~0 |+| a == a == a |+| 0~
+** Combining Independent Values in a Context
+F[A]: F is the context, A is the value
+List[Int]: List is the context, Int is the value
+#+begin_lang scala
+(Option(1), Option(2)).mapN(_ + _) == Some(3)
+(Option(1), Option.empty[Int]).mapN(_ + _) == None
+
+// It extends to more values
+(Option(1), Option(2), Option(3)).mapN(_ + _ + _) == Some(6)
+// And other container types
+(List(1), List(2), List(3)).mapN((a, b, c) => s"${a * b + c}") == List("5")
+
+
+(F[A], F[B], ..., F[N]).mapN((A, B, ..., N) => Z) == F[Z]
+#+end_lang
+
+There is a simpler version of ~mapN~ if we just want a tuple of values.
+
+#+begin_lang scala
+(Option(1), Option(2)).tupled == Option((1, 2))
+
+(F[A], F[B], ..., F[N]).tupled == F[(A, B, ..., N)]
+#+end_lang
+
+This is a *Semigroupal* (sometimes called *Applicative*)
+- basic operation is ~product~
+  ~F[A] product F[B] = F[(A, B)]~
+** Combining Values in a Collection
+#+begin_lang scala
+List(Option(1), Option(2)).sequence == Some(List(1, 2))
+List(Option(1), None).sequence == None
+
+F[G[A]].sequence == G[F[A]]
+#+end_lang
+
+There is a more general version of ~sequence~ called ~traverse~.
+
+#+begin_lang scala
+List(1, 2, 3).traverse(x => if(x <= 3) Some(x.toString) else None) == Some(List("1", "2", "3"))
+List(1, 2, 3).traverse(x => if(x < 3) Some(x.toString) else None) == None
+
+F[A].traverse(A => G[B]) == G[F[B]]
+#+end_lang
+** Parallel
+#+begin_lang scala
+(List(1, 2, 3), List(4, 5, 6)).tupled
+  == List((1,4), (1,5), (1,6), (2,4), (2,5), (2,6), (3,4), (3,5), (3,6))
+(List(1,2,3), List(4,5,6)).parTupled
+  == List((1,4), (2,5), (3,6))
+
+("Error 1".asLeft[Int], "Error 2".asLeft[Int]).tupled == Left("Error 1")
+("Error 1".asLeft[Int], "Error 2".asLeft[Int]).parTupled == Left("Error 1Error 2")
+#+end_lang
+
+~parMapN~, ~parTraverse~, etc. allow us to choose alternative semantics for independent (semigroupal) combination of elements.
+* Error Accumulation
+Error accumulation is as simple as using ~parMapN~ etc.
