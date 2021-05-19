@@ -187,6 +187,8 @@ We can think of a type class as expressing a constraint on a type variable.
 *** Type Class
 A trait that specifies an interface. E.g. ~Semigroup~. Type classes must always have at least one type parameter.
 *** Type Class Instances
+Concrete implementation of a type class for a specific type.
+
 Type class instances are implicit values that implement the type class trait.
 
 Three ways of declaring:
@@ -198,3 +200,5 @@ Note that implicit values cannot be defined at the top level (in Scala 2).
 Normally put them inside a relevant companion object so the compiler automatically finds them without requiring the user to import them.
 
 Note that implicit parameters count as implicit values in the scope of the method where they are defined.
+
+Implicit def allows type class composition---this is the most powerful thing we can do with type classes
