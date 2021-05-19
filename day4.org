@@ -129,3 +129,72 @@ Summary:
 - An implicit parameter means the compiler can provide a method parameter that is not explicitly passed
 - The values that compiler will pass are called implicit values (type class instances)
 - The compiler looks for implicit values in the implicit scope (lexical scope + companion objects of associated types)
+** Context Bounds
+A context bound allows us to write an implicit parameter list implicitly.
+
+These are equivalent:
+#+begin_lang scala
+def combine[A](a1: A, a2: A)(implicit s: Semigroup[A]): A =
+  s.combine(a1, a2)
+
+def combine[A: Semigroup](a1: A, a2: A): A =
+  a1 |+| a2
+#+end_lang
+
+Can use one or the other but not both.
+
+Context bounds do not give an accessible name to the implicit parameters
+- can use ~implicitly~ to access them, if needed, but you're doing it wrong if you want to refer explicitly to implicit parameters---just use implicits parameters with names in this case
+
+#+begin_lang options
+def combine[A: Semigroup](a1: A, a2: A): A = {
+  val s = implicitly[Semigroup[A]]
+  s.combine(a1, a2)
+}
+#+end_lang
+** Higher-Kinded Types
+~F[_]~
+
+Type constructors vs types
+- ~List[Int]~ is a type. Analogous to non-function values.
+- ~List~ is not a type. It is a type constructor. Analogous to a function value: pass a type to it and we get a type back.
+
+Kinds are the "types" of types
+- ~Int~, ~List[Int]~, ~String~ have kind *
+- ~List~ has kind * -> *
+
+A type constructor with kind * -> * is written ~F[_]~ in Scala. The ~_~ indicates a type "hole" where we must provide a type. Can also write ~F[_,_]~ etc.
+** Implicit Parameters as Constraints
+We can think of a type class as expressing a constraint on a type variable.
+
+~def foo[A](a: A)~ means any type A
+~def foo[A: Semigroup](a: A)~ means any type A that has a Semigroup available
+** Type Classes
+- [X] implicit parameters (important)
+- [ ] implicit values (important)
+- [ ] implicit classes (not really necessary)
+- [ ] implicit parameters (evil)
+
+|----------------------+---------------------------------------|
+| Type class concepts  | Scala implementation                  |
+|----------------------+---------------------------------------|
+| Type class           | trait                                 |
+| Type class instances | implicit value                        |
+| Type class use       | implicit parameter (or context bound) |
+| Ease of use          | implicit class                        |
+|----------------------+---------------------------------------|
+
+*** Type Class
+A trait that specifies an interface. E.g. ~Semigroup~. Type classes must always have at least one type parameter.
+*** Type Class Instances
+Type class instances are implicit values that implement the type class trait.
+
+Three ways of declaring:
+1. ~implicit val~
+2. ~implicit object~
+3. ~implicit def~ where *all the parameters are implicit*
+
+Note that implicit values cannot be defined at the top level (in Scala 2).
+Normally put them inside a relevant companion object so the compiler automatically finds them without requiring the user to import them.
+
+Note that implicit parameters count as implicit values in the scope of the method where they are defined.
