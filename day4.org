@@ -1,0 +1,131 @@
+#+TITLE: Day 4
+* Type Classes
+- What do they do for us?
+- From the user side
+- From the implementor side
+
+~implicits~
+** What Do They Do
+*Ad hoc polymorphism*
+- how can we get different types to implement the same interface?
+
+Algebraic data types:
+- closed world
+- add new functionality (without modifying existing code) but not new data
+
+#+begin_lang scala
+// Cannot add new data without modifying existing code (which we might not have
+// access to)
+sealed trait Option[A]
+final case class Some[A](value: A) extends Option[A]
+final case class None[A]() extends Option[A]
+
+// Add new functions
+object OptionExample {
+  def map[A, B](option: Option[A])(f: A => B): Option[B] =
+    option match {
+      case Some(v) => Some(f(v))
+      case None() => None()
+    }
+}
+#+end_lang
+
+
+OO:
+- traits (but not sealed traits)
+- can add new data (extend the trait)
+- cannot add new methods to the trait without breaking existing code
+
+#+begin_lang scala
+trait Calculator {
+  def add(x: Double, y: Double): Double
+  def multiply(x: Double, y: Double): Double
+  def divide(x: Double, y: Double): Double
+  def subtract(x: Double, y: Double): Double
+}
+
+// Can create arbitrary number of things that extend Calculator
+object DoubleCalculator extends Calculator {
+  def add(x: Double, y: Double): Double =
+    x + y
+  def multiply(x: Double, y: Double): Double =
+    x * y
+  def divide(x: Double, y: Double): Double =
+    x / y
+  def subtract(x: Double, y: Double): Double =
+    x - y
+}
+
+object NoisyCalculator extends Calculator {
+  def add(x: Double, y: Double): Double = {
+    println(s"Adding $x $y")
+    x + y
+  }
+  def multiply(x: Double, y: Double): Double = {
+    println(s"Multiplying $x $y")
+    x * y
+  }
+  def divide(x: Double, y: Double): Double =
+    x / y
+  def subtract(x: Double, y: Double): Double =
+    x - y
+}
+
+object CalculatorExample {
+// Cannot implement this because we don't know everything that subtypes Calculator
+  def doSomething(calc: Calculator): SomeResult =
+    calc match {
+       case ???
+    }
+}
+#+end_lang
+
+Summary:
+- FP: add new functionality (methods that work with data) but not new data (cases in the algebraic data type)
+- OO: add new data (extend an interface) but not new functionality (methods on an interface)
+
+Adding new data that implements an interface == ad-hoc polymorphism
+- Restriction in OO is that you have to declare it at the time you implement the type
+
+JSON serialization:
+- want to serialize String, Date, etc.
+- might think of some method ~toJson~
+- but JSON wasn't invented in the 1990s when Java came out
+
+Type classes:
+- say that a type implements an interface (a class; hence the name) without having to declare that at the same time the type is declared.
+** Using Type Classes
+Assume someone else has defined the type classes. How do we use them?
+Answer: implicit parameters (or context bounds, which are simpler syntax for the same thing)
+
+If we have a method:
+
+#+begin_lang scala
+1 |+| 2
+1.combine(2)
+List(1, 2, 3) |+| List(4, 5, 6)
+
+import cats.Monoid
+def reduce[A](data: List[A])(implicit monoid: Monoid[A]): A =
+  data.combineAll
+#+end_lang
+
+We want a monoid
+- we make the parameter implicit
+- this means the compiler will pass a value for the parameter if 1) we don't pass one explicitly and 2) it can find a value to pass
+
+Where does the compiler look for values?
+Answer: implicit scope (What is the implicit scope?)
+
+What if there is more than one value available in the implicit scope?
+Answer: the compiler will complain about ambiguous implicit values
+(It's good practice to not have more than one implicit value available)
+
+The implicit scope:
+- The normal lexical scope
+- Companion objects of associated types. Any type mentioned in an error if the type class instance (implicit value) cannot be found.
+
+Summary:
+- An implicit parameter means the compiler can provide a method parameter that is not explicitly passed
+- The values that compiler will pass are called implicit values (type class instances)
+- The compiler looks for implicit values in the implicit scope (lexical scope + companion objects of associated types)
