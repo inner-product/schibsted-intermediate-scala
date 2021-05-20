@@ -1,0 +1,26 @@
+#+TITLE: Day 5
+* Property-based Testing
+** The Absolute Parable
+Kafka, 2021
+
+[abs-introduced]: https://github.com/apache/kafka/commit/d1a22b2e3b59c2cf00adabd75d29ddd53938bacb
+[kafka-1469]: https://issues.apache.org/jira/browse/KAFKA-1469
+
+#+begin_lang scala
+def abs(x: Int): Int =
+  if (x < 0) -x else x
+#+end_lang
+** Types vs Tests
+*** Types
+- Prove properties for all possible inputs
+- Limited in what we can prove
+  + Economic limitations
+  + Theoretical limitations
+*** Unit Testing
+- Prove properties for single input
+- Relatively cheap to produce
+*** Property-based Testing
+- What if we generated test inputs? (Generative testing)
+- Cover more cases
+- How do we write a test when the input is not known?
+- Look for general properties that hold for any input in the set of generated values.
